@@ -1,4 +1,4 @@
-'use strict'
+ 'use strict'
 require('dotenv').config()
 
 const express     = require('express')
@@ -35,8 +35,20 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }))
 
+// ── CORS (allow localhost + deployed frontend) ─────────────────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+].filter(Boolean)
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -104,18 +116,3 @@ app.use('/api/hitl',        hitlRoutes)
 
 // ── 404 ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({ error: `Route ${req.method} ${req.path} not found` })
-})
-
-// ── Error handler ─────────────────────────────────────────────────────
-app.use(errorHandler)
-
-// ── Start ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n🟢 LANZEY API running on http://localhost:${PORT}`)
-  console.log(`   Environment : ${process.env.NODE_ENV}`)
-  console.log(`   DB          : ${(process.env.DATABASE_URL || '').replace(/:([^@]+)@/, ':***@')}`)
-  console.log(`   Health      : http://localhost:${PORT}/api/health\n`)
-})
-
-module.exports = app
