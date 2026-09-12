@@ -1,4 +1,4 @@
- 'use strict'
+'use strict'
 require('dotenv').config()
 
 const express     = require('express')
@@ -55,7 +55,6 @@ app.use(cors({
 }))
 
 // ── Rate limiting ─────────────────────────────────────────────────────
-// Only apply rate limiting in production
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'production' ? 200 : 100000,
@@ -116,3 +115,18 @@ app.use('/api/hitl',        hitlRoutes)
 
 // ── 404 ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
+  res.status(404).json({ error: `Route ${req.method} ${req.path} not found` })
+})
+
+// ── Error handler ─────────────────────────────────────────────────────
+app.use(errorHandler)
+
+// ── Start ─────────────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`\n🟢 LANZEY API running on http://localhost:${PORT}`)
+  console.log(`   Environment : ${process.env.NODE_ENV}`)
+  console.log(`   DB          : ${(process.env.DATABASE_URL || '').replace(/:([^@]+)@/, ':***@')}`)
+  console.log(`   Health      : http://localhost:${PORT}/api/health\n`)
+})
+
+module.exports = app
