@@ -1,13 +1,13 @@
-// LANZEY — Prisma Schema (SQLite edition)
-// SQLite: no enums, no @db.Text/@db.Date, Json → String
+// LANZEY — Prisma Schema (PostgreSQL production edition)
+// JSON-like fields are stored as strings for compatibility with the app.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./lanzey.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ── User ─────────────────────────────────────────────────────────────────
