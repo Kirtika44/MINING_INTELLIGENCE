@@ -30,6 +30,9 @@ const sitesRoutes        = require('./routes/sites')
 const app  = express()
 const PORT = process.env.PORT || 4000
 
+// Vercel forwards the visitor address in X-Forwarded-For.
+app.set('trust proxy', 1)
+
 // ── Security ─────────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -38,6 +41,8 @@ app.use(helmet({
 // ── CORS (allow localhost + deployed frontend) ─────────────────────────
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://mining-intelligence-kappa.vercel.app',
+  'https://mining-intelligence-urbannova.vercel.app',
   process.env.FRONTEND_URL,
 ].filter(Boolean)
 
