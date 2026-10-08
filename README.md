@@ -43,9 +43,15 @@ LANZEY is an AI-assisted mining intelligence platform for Indian coal mining org
 
 ### [🚀 Launch the live preview](https://mining-intelligence-urbannova.vercel.app/)
 
-The landing page is live on Vercel. The GitHub repository is connected to the Vercel project, so new commits can trigger deployments.
+The production site and API are live and connected. Sign in with a demo account below to explore the dashboards and seeded mine data.
 
-The backend API is deployed at [`https://mining-intelligence-api.vercel.app/api`](https://mining-intelligence-api.vercel.app/api/health), and `VITE_API_URL` is configured for the frontend's Production and Preview deployments. The backend uses Neon PostgreSQL. Uploaded files currently use temporary Vercel function storage, so use durable object storage before relying on long-term file retention.
+- **Frontend:** [https://mining-intelligence-urbannova.vercel.app](https://mining-intelligence-urbannova.vercel.app/)
+- **Alternate Vercel domain:** [https://mining-intelligence-kappa.vercel.app](https://mining-intelligence-kappa.vercel.app/)
+- **API health:** [https://mining-intelligence-api.vercel.app/api/health](https://mining-intelligence-api.vercel.app/api/health)
+- **Vercel frontend project:** [mining-intelligence](https://vercel.com/urbannova/mining-intelligence)
+- **Vercel backend project:** [mining-intelligence-api](https://vercel.com/urbannova/mining-intelligence-api)
+
+Production uses Neon PostgreSQL. The database is seeded with sample users, mine sites, production, geology, reserve, machinery, environment, and risk data. Uploaded files use temporary Vercel function storage; configure durable object storage before relying on long-term file retention.
 
 [Open the Vercel deployment](https://vercel.com/urbannova/mining-intelligence) · [Read the evaluator report](./Lanzey_SIH_Evaluator_Report.pdf)
 
@@ -78,7 +84,7 @@ The backend API is deployed at [`https://mining-intelligence-api.vercel.app/api`
 | --- | --- |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, React Router |
 | Backend | Node.js, Express |
-| Data layer | Prisma ORM with SQLite for the demo |
+| Data layer | Prisma ORM; Neon PostgreSQL in production, SQLite for local development |
 | Authentication | JWT and bcrypt |
 | Document processing | pdf-parse, mammoth, xlsx, and multer |
 
@@ -135,9 +141,7 @@ For other environment values, see [Environment variables](#environment-variables
 <details>
 <summary><strong>Show demo credentials</strong></summary>
 
-These accounts are for a seeded local/demo database. They are not a working login for the current Vercel preview until a backend is deployed and connected.
-
-All demo accounts use password `lanzey123`.
+These demo accounts are seeded in the live Neon database and can be used on the production site. All use password `lanzey123`. The public demo data is illustrative, not authoritative mining data.
 
 | Email | Role |
 | --- | --- |
@@ -160,7 +164,7 @@ The root [`.env.example`](./.env.example) includes these settings:
 | Variable | Used by | Purpose |
 | --- | --- | --- |
 | `VITE_API_URL` | Frontend | Public base URL for the backend API |
-| `DATABASE_URL` | Backend | SQLite database location |
+| `DATABASE_URL` | Backend | Prisma database connection (SQLite locally; Neon PostgreSQL in production) |
 | `JWT_SECRET` | Backend | Secret used to sign tokens; use a long random value |
 | `JWT_EXPIRES_IN` | Backend | Token lifetime |
 | `PORT` | Backend | API server port |
@@ -184,11 +188,11 @@ The Vercel project is configured for this repository:
 - **Output directory:** `dist`
 - **Live production URL:** [mining-intelligence-urbannova.vercel.app](https://mining-intelligence-urbannova.vercel.app/)
 
-The backend is deployed as the `mining-intelligence-api` Express project on Vercel. Its API base URL is `https://mining-intelligence-api.vercel.app/api`; the frontend's `VITE_API_URL` is set to this address for Production and Preview.
+The backend is deployed as the `mining-intelligence-api` Express project on Vercel. Its API base URL is `https://mining-intelligence-api.vercel.app/api`; the frontend's `VITE_API_URL` points to this address in Production and Preview.
 
 ### Backend
 
-The backend starts with `node src/index.js` (or `npm run dev` for local development). The demo uses SQLite and stores uploaded files locally. For a production backend, use durable database and file storage and set the backend environment variables from [`.env.example`](./.env.example).
+The backend starts with `node src/index.js` (or `npm run dev` locally). Production uses Neon PostgreSQL; local development can use SQLite. Uploaded files are temporarily stored in the Vercel function's temporary filesystem, so they may not persist between invocations. Configure Vercel Blob or another durable object store for persistent uploads. Set local backend values from [`.env.example`](./.env.example).
 
 <details>
 <summary><strong>Build the frontend locally</strong></summary>
@@ -238,8 +242,9 @@ The Express API is mounted under `/api`. See the backend source for request and 
 
 - OCR for scanned PDFs needs an external OCR service; the current PDF path handles text PDFs.
 - Field extraction is rule-based and should be reviewed by a human.
-- Production data uses managed Neon PostgreSQL. Local development can still use SQLite.
-- Uploaded files currently use temporary Vercel function storage; configure Vercel Blob or another durable object store before relying on long-term file retention.
+- Production uses managed Neon PostgreSQL; local development can use SQLite.
+- Uploaded files use temporary Vercel function storage and are not durable. Configure Vercel Blob or another object store for long-term retention.
+- CIL and Government SSO are demo placeholders and are not configured.
 
 ---
 
