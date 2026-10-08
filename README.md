@@ -18,7 +18,7 @@
 </p>
 
 > **Live preview:** [Open LANZEY](https://mining-intelligence-urbannova.vercel.app/) · [Vercel project](https://vercel.com/urbannova/mining-intelligence)  
-> The current deployment hosts the frontend. Login and data workflows need a separately hosted backend and a configured `VITE_API_URL`; those backend services are not part of this live preview yet.
+> The frontend and backend are deployed on Vercel. The backend health endpoint is [`/api/health`](https://mining-intelligence-api.vercel.app/api/health), and the backend uses managed Neon PostgreSQL.
 
 ## Navigate
 
@@ -45,7 +45,7 @@ LANZEY is an AI-assisted mining intelligence platform for Indian coal mining org
 
 The landing page is live on Vercel. The GitHub repository is connected to the Vercel project, so new commits can trigger deployments.
 
-For a full end-to-end demo, deploy the backend separately and set `VITE_API_URL` in the Vercel project to its HTTPS API base URL (for example, `https://your-api.example.com/api`). Until then, authentication, uploads, dashboards, and other API-backed flows will not work on the live site.
+The backend API is deployed at [`https://mining-intelligence-api.vercel.app/api`](https://mining-intelligence-api.vercel.app/api/health), and `VITE_API_URL` is configured for the frontend's Production and Preview deployments. The backend uses Neon PostgreSQL. Uploaded files currently use temporary Vercel function storage, so use durable object storage before relying on long-term file retention.
 
 [Open the Vercel deployment](https://vercel.com/urbannova/mining-intelligence) · [Read the evaluator report](./Lanzey_SIH_Evaluator_Report.pdf)
 
@@ -184,7 +184,7 @@ The Vercel project is configured for this repository:
 - **Output directory:** `dist`
 - **Live production URL:** [mining-intelligence-urbannova.vercel.app](https://mining-intelligence-urbannova.vercel.app/)
 
-To enable API-backed features, deploy the backend to a host that supports the Express server and persistent storage, then set `VITE_API_URL` in Vercel to the backend's HTTPS API URL and redeploy.
+The backend is deployed as the `mining-intelligence-api` Express project on Vercel. Its API base URL is `https://mining-intelligence-api.vercel.app/api`; the frontend's `VITE_API_URL` is set to this address for Production and Preview.
 
 ### Backend
 
@@ -238,8 +238,8 @@ The Express API is mounted under `/api`. See the backend source for request and 
 
 - OCR for scanned PDFs needs an external OCR service; the current PDF path handles text PDFs.
 - Field extraction is rule-based and should be reviewed by a human.
-- SQLite and local file uploads are suitable for a demo, not a multi-instance production deployment.
-- The current Vercel deployment is frontend-only until a backend URL is configured.
+- Production data uses managed Neon PostgreSQL. Local development can still use SQLite.
+- Uploaded files currently use temporary Vercel function storage; configure Vercel Blob or another durable object store before relying on long-term file retention.
 
 ---
 
