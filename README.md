@@ -5,9 +5,9 @@
 </p>
 
 <p align="center">
-  <a href="https://mining-intelligence-urbannova.vercel.app/"><img src="https://img.shields.io/badge/🚀_Open_Live_Preview-Vercel-black?logo=vercel" alt="Open the live LANZEY preview"></a>
+  <a href="https://mining-intelligence-urbannova.vercel.app/"><img src="https://img.shields.io/badge/Live_Preview-Vercel-black?logo=vercel" alt="Open the live LANZEY preview"></a>
   <a href="https://github.com/Kirtika44/MINING_INTELLIGENCE"><img src="https://img.shields.io/badge/Source-GitHub-181717?logo=github" alt="View source on GitHub"></a>
-  <a href="./Lanzey_SIH_Evaluator_Report.pdf"><img src="https://img.shields.io/badge/📄_Evaluator_Report-PDF-b31b1b" alt="Read the evaluator report"></a>
+  <a href="./Lanzey_SIH_Evaluator_Report.pdf"><img src="https://img.shields.io/badge/Evaluator_Report-PDF-b31b1b" alt="Read the evaluator report"></a>
 </p>
 
 <p align="center">
@@ -182,7 +182,7 @@ The Vercel project is configured for this repository:
 - **Framework:** Vite
 - **Build command:** `npm run build`
 - **Output directory:** `dist`
-- **Production preview:** [mining-intelligence-urbannova.vercel.app](https://mining-intelligence-urbannova.vercel.app/)
+- **Live production URL:** [mining-intelligence-urbannova.vercel.app](https://mining-intelligence-urbannova.vercel.app/)
 
 To enable API-backed features, deploy the backend to a host that supports the Express server and persistent storage, then set `VITE_API_URL` in Vercel to the backend's HTTPS API URL and redeploy.
 
@@ -215,16 +215,20 @@ The Express API is mounted under `/api`. See the backend source for request and 
 | GET | `/api/health` | Health check |
 | POST | `/api/auth/login` | Sign in |
 | GET | `/api/auth/me` | Current user |
-| GET / POST | `/api/documents` | List and upload documents |
+| GET | `/api/sites` | List sites |
+| GET | `/api/documents` | List documents |
+| POST | `/api/documents/upload` | Upload a document |
 | GET | `/api/documents/:id/status` | Processing status |
-| GET | `/api/production/*` | Production records and trends |
-| GET | `/api/geology/*` | Geological data and seams |
-| GET | `/api/machinery/*` | Machinery and telemetry |
-| GET | `/api/environment/*` | Environmental records |
-| GET | `/api/reserve/*` | Reserve records |
-| GET / POST | `/api/reports` | List and generate reports |
-| GET / POST | `/api/query` | Ask LANZEY |
-| GET / PATCH | `/api/hitl/*` | Human review workflow |
+| GET | `/api/production/summary`, `/api/production/trend` | Production summaries and trends |
+| GET | `/api/geology/seams`, `/api/geology/summary` | Geological data |
+| GET | `/api/machinery`, `/api/machinery/summary` | Machinery records |
+| GET | `/api/environment`, `/api/environment/compliance-summary` | Environmental records |
+| GET | `/api/reserve`, `/api/reserve/summary` | Reserve records |
+| GET | `/api/reports`, `/api/reports/:id` | List and read reports |
+| POST | `/api/reports/generate` | Generate a report |
+| POST | `/api/query`, `/api/query/official` | Ask LANZEY |
+| POST / PATCH | `/api/validate/:reportId` | Validate, approve, or reject a report |
+| GET / POST / PATCH | `/api/hitl/*` | Human review workflow |
 | GET | `/api/knowledge/*` | Knowledge base |
 | GET | `/api/admin/*` | Administration and audit data |
 
