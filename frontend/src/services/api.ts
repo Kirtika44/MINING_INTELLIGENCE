@@ -34,7 +34,9 @@ async function request<T>(
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers })
 
-  if (res.status === 401) {
+  // Invalid login credentials are expected API responses; let LoginPage show the error.
+  // Clear and redirect only when an existing authenticated session expires.
+  if (res.status === 401 && path !== '/auth/login') {
     clearToken()
     window.location.href = '/login'
     throw new Error('Session expired. Please log in again.')
