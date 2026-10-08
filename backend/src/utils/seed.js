@@ -14,6 +14,13 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('\n🌱 LANZEY Seed Starting...\n')
 
+  // Production install hooks may run on every deployment. Seed only a fresh database.
+  const existingUsers = await prisma.user.count()
+  if (existingUsers > 0) {
+    console.log(`Database already contains ${existingUsers} user(s); skipping demo seed.`)
+    return
+  }
+
   // ── Users ──────────────────────────────────────────────────────────
   console.log('Creating users...')
   const pw = await bcrypt.hash('lanzey123', 12)
