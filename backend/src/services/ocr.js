@@ -38,7 +38,7 @@ async function extractText(filePath, mimeType) {
 
     // Excel / CSV
     if (['.xlsx','.xls','.csv'].includes(ext) ||
-        mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
+        mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType === 'text/csv') {
       const XLSX = require('xlsx')
       const wb   = XLSX.readFile(filePath)
       let text   = ''
@@ -51,16 +51,27 @@ async function extractText(filePath, mimeType) {
     }
 
     // Word
-    if (['.docx','.doc'].includes(ext) ||
+    if (ext === '.docx' ||
         mimeType.includes('word') || mimeType.includes('document')) {
       const mammoth = require('mammoth')
       const result  = await mammoth.extractRawText({ path: filePath })
       return { text: result.value, pages: 1, method: 'mammoth' }
     }
 
-    // Plain text / fallback
-    if (['.txt','.csv'].includes(ext)) {
-      const text = fs.readFileSync(filePath, 'utf8')
+    // Text-based mining exports and notes
+    const textExtensions = new Set([
+      '.txt', '.log', '.md', '.json', '.jsonl', '.ndjson',
+      '.tsv', '.xml', '.html', '.htm', '.yaml', '.yml',
+    ])
+    const isTextMime = mimeType.startsWith('text/') ||
+      ['application/json', 'application/x-ndjson', 'application/xml'].includes(mimeType)
+    if (textExtensions.has(ext) || isTextMime) {
+      const buffer = fs.readFileSync(filePath)
+      if (buffer.includes(0)) {
+        return { text: '', pages: 0, method: 'binary-not-text' }
+      }
+
+      const text = buffer.toString('utf8')
       return { text, pages: 1, method: 'plaintext' }
     }
 
