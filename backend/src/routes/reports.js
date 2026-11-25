@@ -250,12 +250,6 @@ function buildReportContent({ type, period, site, productions, seams, geoData, r
 
   if (uploadedDocuments.length > 0) {
     const documentsById = new Map(uploadedDocuments.map(doc => [doc.id, doc]))
-    const fieldsByDocument = new Map()
-    for (const field of extractedFields) {
-      if (!fieldsByDocument.has(field.documentId)) fieldsByDocument.set(field.documentId, [])
-      fieldsByDocument.get(field.documentId).push(field)
-    }
-
     const findings = extractedFields.map(field => {
       const doc = documentsById.get(field.documentId)
       return {
@@ -266,19 +260,56 @@ function buildReportContent({ type, period, site, productions, seams, geoData, r
         page: field.sourcePage,
       }
     })
-    sections.unshift({
-      title: 'Uploaded Document Findings',
-      data: findings.length ? findings : 'Document processed, but no structured fields were extracted.',
-      note: 'Values below were extracted from the selected uploaded document(s). Review them against the source before making operational decisions.',
+
+    // Empty database summaries can hide values extracted from the uploaded file.
+    sections = sections.filter(section =>
+      !(typeof section.data === 'string' && /^(data not available|insufficient source data)$/i.test(section.data.trim()))
+    )
+
+    const fieldLabels = {
+      mineName: 'Mine',
+      productionMT: 'Production',
+      targetMT: 'Target',
+      dispatchMT: 'Dispatch',
+      totalReserveMT: 'Total reserve',
+      mineableReserveMT: 'Mineable reserve',
+      gcvKcal: 'GCV',
+      grade: 'Coal grade',
+      year: 'Year',
+    }
+    const fileSummaries = uploadedDocuments.map(doc => {
+      const docFields = extractedFields.filter(field => field.documentId === doc.id)
+      const facts = docFields.slice(0, 8).map(field => {
+        const label = fieldLabels[field.fieldName] || field.fieldName.replace(/([A-Z])/g, ' $1').trim()
+        const value = String(field.fieldValue).slice(0, 120)
+        const unit = /(?:production|target|dispatch|reserve).*mt$/i.test(field.fieldName) ? ' MT' : ''
+        return `${label}: ${value}${unit}`
+      })
+      return facts.length
+        ? `${doc.originalName} — ${facts.join('; ')}`
+        : `${doc.originalName} — no structured fields were extracted`
     })
 
-    const documentSummary = uploadedDocuments.map(doc => {
-      const count = (fieldsByDocument.get(doc.id) || []).length
-      return `${doc.originalName} (${count} extracted fields)`
-    }).join('; ')
-    summary = summary
-      ? `${summary} Uploaded source: ${documentSummary}.`
-      : `Report generated from uploaded source: ${documentSummary}.`
+    const hasProductionFields = extractedFields.some(field =>
+      ['productionMT', 'targetMT', 'dispatchMT', 'year', 'mineName'].includes(field.fieldName)
+    )
+    sections.unshift({
+      title: type === 'production' && hasProductionFields ? 'Production Data from Uploaded Files' : 'Uploaded Document Findings',
+      data: findings.length ? findings : 'The file was processed, but no structured fields were extracted.',
+      note: 'Extracted values are shown with their source filename. Verify them against the uploaded file before operational use.',
+    })
+
+    const typeLabel = {
+      production: 'Production',
+      official: 'Official response',
+      geological: 'Geological',
+      machinery: 'Machinery',
+      reserve: 'Reserve',
+      environmental: 'Environmental',
+    }[type] || 'Mining'
+    summary = findings.length
+      ? `${typeLabel} report generated from uploaded document data: ${fileSummaries.join(' | ')}.`
+      : `${typeLabel} report generated for uploaded file(s): ${fileSummaries.join(' | ')}. No structured values were available to summarize.`
 
     for (const doc of uploadedDocuments) {
       sources.push({ source: 'Uploaded document', doc: doc.originalName })
@@ -313,7 +344,7 @@ function buildReportContent({ type, period, site, productions, seams, geoData, r
     summary,
     sections,
     sources,
-    disclaimer: 'This report is AI-generated based on available structured data. All values reference source documents where available.',
+    disclaimer: 'This report is generated from available structured records and extracted document values. Verify extracted values against the source file before operational use.',
   }
 }
 
