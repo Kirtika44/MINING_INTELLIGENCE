@@ -128,7 +128,7 @@ function ActiveDoc({doc,onDone}:{doc:Document;onDone:()=>void}) {
             <Link to="/ask" className="btn-ghost text-[10px] py-1 px-2.5 gap-1"><Brain size={10}/> Ask LANZEY</Link>
             <Link to="/knowledge" className="btn-ghost text-[10px] py-1 px-2.5 gap-1"><Database size={10}/> Knowledge Base</Link>
             <Link to={`/hitl/${doc.id}`} className="btn-ghost text-[10px] py-1 px-2.5 gap-1"><ShieldCheck size={10}/> HITL Verify</Link>
-            <Link to="/reports/generate" className="btn-primary text-[10px] py-1 px-2.5 gap-1 ml-auto">Generate Report <ArrowRight size={10}/></Link>
+            <Link to={`/reports/generate?documentId=${encodeURIComponent(doc.id)}&dept=${encodeURIComponent(doc.department||dept)}`} className="btn-primary text-[10px] py-1 px-2.5 gap-1 ml-auto">Generate Report <ArrowRight size={10}/></Link>
           </div>
         </div>
       )}
