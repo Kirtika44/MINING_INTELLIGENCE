@@ -58,12 +58,12 @@ Production uses Neon PostgreSQL. The database is seeded with sample users, mine 
 ## Features
 
 - **Department dashboards** for CIL operations, CMPDI, geology, environment, machinery, reserves, and administration
-- **Document intake and extraction** for PDFs, scanned images, spreadsheets, and Word documents
+- **Document intake and extraction** for text PDFs, DOCX, XLSX/XLS, CSV/TSV, JSON/JSONL, plain text, and log/Markdown/XML/HTML/YAML files
 - **Human-in-the-loop review** to inspect extracted fields, resolve exceptions, and approve or correct data
 - **Knowledge base** with filters and source-document traceability
 - **Ask LANZEY** for natural-language questions over indexed mining documents
 - **Risk intelligence** with risk levels, trends, and recommended actions
-- **Report generation and validation** with review, approval, and export flows
+- **Report generation and validation** from mine records or uploaded document extractions, with source traceability and review/export flows
 - **Audit trail** for user and system activity
 - **Official query assistant** for production-trend questions
 
@@ -240,7 +240,7 @@ The Express API is mounted under `/api`. See the backend source for request and 
 
 ## Known limitations
 
-- OCR for scanned PDFs needs an external OCR service; the current PDF path handles text PDFs.
+- Scanned PDFs and images are not OCR-processed; use text-based PDFs or supported spreadsheets/text documents for field extraction.
 - Field extraction is rule-based and should be reviewed by a human.
 - Production uses managed Neon PostgreSQL; local development can use SQLite.
 - Uploaded files use temporary Vercel function storage and are not durable. Configure Vercel Blob or another object store for long-term retention.

@@ -25,23 +25,35 @@ const storage = multer.diskStorage({
   },
 })
 
-const ALLOWED_TYPES = [
+const ALLOWED_TYPES = new Set([
   'application/pdf',
-  'image/jpeg', 'image/png', 'image/tiff',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.ms-excel',
-  'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-]
+  'text/plain',
+  'text/csv',
+  'text/tab-separated-values',
+  'application/json',
+  'application/x-ndjson',
+])
+
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf', '.docx', '.xlsx', '.xls',
+  '.csv', '.tsv', '.txt', '.log',
+  '.json', '.jsonl', '.ndjson',
+  '.md', '.xml', '.html', '.htm', '.yaml', '.yml',
+])
 
 const upload = multer({
   storage,
   limits: { fileSize: (parseInt(process.env.MAX_FILE_SIZE_MB) || 50) * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (ALLOWED_TYPES.includes(file.mimetype)) {
+    const extension = path.extname(file.originalname).toLowerCase()
+    const mimeType = String(file.mimetype || '').toLowerCase()
+    if (ALLOWED_EXTENSIONS.has(extension) || ALLOWED_TYPES.has(mimeType)) {
       cb(null, true)
     } else {
-      cb(new Error(`Unsupported file type: ${file.mimetype}`))
+      cb(new Error('Unsupported file type. Use PDF, DOCX, XLSX/XLS, CSV/TSV, TXT, JSON, Markdown, LOG, XML, HTML, or YAML.'))
     }
   },
 })

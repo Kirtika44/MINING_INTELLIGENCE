@@ -38,7 +38,7 @@ async function extractText(filePath, mimeType) {
 
     // Excel / CSV
     if (['.xlsx','.xls','.csv'].includes(ext) ||
-        mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
+        mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType === 'text/csv') {
       const XLSX = require('xlsx')
       const wb   = XLSX.readFile(filePath)
       let text   = ''
@@ -51,16 +51,66 @@ async function extractText(filePath, mimeType) {
     }
 
     // Word
-    if (['.docx','.doc'].includes(ext) ||
+    if (ext === '.docx' ||
         mimeType.includes('word') || mimeType.includes('document')) {
       const mammoth = require('mammoth')
       const result  = await mammoth.extractRawText({ path: filePath })
       return { text: result.value, pages: 1, method: 'mammoth' }
     }
 
-    // Plain text / fallback
-    if (['.txt','.csv'].includes(ext)) {
-      const text = fs.readFileSync(filePath, 'utf8')
+    // Text-based mining exports and notes
+    const textExtensions = new Set([
+      '.txt', '.log', '.md', '.json', '.jsonl', '.ndjson',
+      '.tsv', '.xml', '.html', '.htm', '.yaml', '.yml',
+    ])
+    const isTextMime = mimeType.startsWith('text/') ||
+      ['application/json', 'application/x-ndjson', 'application/xml'].includes(mimeType)
+    if (textExtensions.has(ext) || isTextMime) {
+      const buffer = fs.readFileSync(filePath)
+      if (buffer.includes(0)) {
+        return { text: '', pages: 0, method: 'binary-not-text' }
+      }
+
+      let text = buffer.toString('utf8')
+      if (['.json', '.jsonl', '.ndjson'].includes(ext)) {
+        try {
+          const records = ext === '.json'
+            ? [JSON.parse(text)]
+            : text.split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line))
+          const aliases = {
+            minename: 'Mine',
+            mine: 'Mine',
+            productionmt: 'Production',
+            production: 'Production',
+            targetmt: 'Target',
+            target: 'Target',
+            dispatchmt: 'Dispatch',
+            dispatch: 'Dispatch',
+            totalreservemt: 'Total reserve',
+            mineablereservemt: 'Mineable reserve',
+            gcvkcal: 'GCV',
+            grade: 'Grade',
+            year: 'Year',
+          }
+          const flattened = []
+          const visit = (value, key = '') => {
+            if (Array.isArray(value)) {
+              value.forEach(item => visit(item, key))
+            } else if (value && typeof value === 'object') {
+              Object.entries(value).forEach(([childKey, childValue]) => visit(childValue, childKey))
+            } else if (value != null && key) {
+              const normalized = key.replace(/[^a-z0-9]/gi, '').toLowerCase()
+              const label = aliases[normalized] || key.replace(/([A-Z])/g, ' $1').trim()
+              const unit = /^(productionmt|production|targetmt|target|dispatchmt|dispatch|totalreservemt|mineablereservemt)$/i.test(normalized) ? ' MT' : ''
+              flattened.push(`${label}: ${value}${unit}`)
+            }
+          }
+          records.forEach(record => visit(record))
+          if (flattened.length) text += `\n\n${flattened.join('\n')}`
+        } catch {
+          // Preserve malformed JSON as text so the report can still reference the source.
+        }
+      }
       return { text, pages: 1, method: 'plaintext' }
     }
 
@@ -82,7 +132,7 @@ function extractFields(text, department) {
   if (dateMatches) fields.dates = [...new Set(dateMatches)].slice(0, 5)
 
   // Mine / site name
-  const mineMatch = text.match(/(?:mine|colliery|opencast|project)[:\s]+([A-Z][A-Za-z\s\-]{2,30})/i)
+  const mineMatch = text.match(/(?:mine|colliery|opencast|project)[:\s]+([A-Z][A-Za-z \t\-]{2,30})/i)
   if (mineMatch) fields.mineName = mineMatch[1].trim()
 
   // ── Production fields ─────────────────────────────────────────────
