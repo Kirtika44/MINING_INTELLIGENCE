@@ -71,7 +71,46 @@ async function extractText(filePath, mimeType) {
         return { text: '', pages: 0, method: 'binary-not-text' }
       }
 
-      const text = buffer.toString('utf8')
+      let text = buffer.toString('utf8')
+      if (['.json', '.jsonl', '.ndjson'].includes(ext)) {
+        try {
+          const records = ext === '.json'
+            ? [JSON.parse(text)]
+            : text.split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line))
+          const aliases = {
+            minename: 'Mine',
+            mine: 'Mine',
+            productionmt: 'Production',
+            production: 'Production',
+            targetmt: 'Target',
+            target: 'Target',
+            dispatchmt: 'Dispatch',
+            dispatch: 'Dispatch',
+            totalreservemt: 'Total reserve',
+            mineablereservemt: 'Mineable reserve',
+            gcvkcal: 'GCV',
+            grade: 'Grade',
+            year: 'Year',
+          }
+          const flattened = []
+          const visit = (value, key = '') => {
+            if (Array.isArray(value)) {
+              value.forEach(item => visit(item, key))
+            } else if (value && typeof value === 'object') {
+              Object.entries(value).forEach(([childKey, childValue]) => visit(childValue, childKey))
+            } else if (value != null && key) {
+              const normalized = key.replace(/[^a-z0-9]/gi, '').toLowerCase()
+              const label = aliases[normalized] || key.replace(/([A-Z])/g, ' $1').trim()
+              const unit = /^(production|target|dispatch|totalreservemt|mineablereservemt)$/i.test(normalized) ? ' MT' : ''
+              flattened.push(`${label}: ${value}${unit}`)
+            }
+          }
+          records.forEach(record => visit(record))
+          if (flattened.length) text += `\n\n${flattened.join('\n')}`
+        } catch {
+          // Preserve malformed JSON as text so the report can still reference the source.
+        }
+      }
       return { text, pages: 1, method: 'plaintext' }
     }
 
