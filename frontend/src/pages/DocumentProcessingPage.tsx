@@ -69,13 +69,13 @@ function UploadZone({onUploaded,dept}:{onUploaded:(d:Document)=>void;dept:string
       onClick={()=>!uploading&&ref.current?.click()}
       className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${dragging?'border-coal-green bg-coal-green/5':'border-[#1c3828] hover:border-coal-green/40 hover:bg-[#122318]/40'} ${uploading?'opacity-60 cursor-wait':''}`}>
       <input ref={ref} type="file" className="hidden" disabled={uploading}
-        accept=".pdf,.jpg,.jpeg,.png,.tiff,.xlsx,.xls,.doc,.docx,.txt"
+        accept=".pdf,.docx,.xlsx,.xls,.csv,.tsv,.txt,.log,.json,.jsonl,.ndjson,.md,.xml,.html,.htm,.yaml,.yml"
         onChange={e=>{const f=e.target.files?.[0];if(f)handle(f)}}/>
       <div className="flex flex-col items-center gap-3">
         {uploading?<Loader2 size={28} className="text-coal-green animate-spin"/>:<Upload size={28} className={dragging?'text-coal-green':'text-[#6b7280]'}/>}
         <div>
           <p className="text-white text-sm font-semibold">{uploading?'Uploading...':dragging?'Drop to upload':'Drag & drop files here'}</p>
-          <p className="text-[#6b7280] text-xs mt-1">Support: PDF, DOCX, XLSX, JPG, PNG, TIFF (up to 50 MB)</p>
+          <p className="text-[#6b7280] text-xs mt-1">Supported: text PDFs, DOCX, XLSX/XLS, CSV/TSV, TXT, JSON, Markdown, LOG, XML, HTML, YAML (up to 50 MB). Scanned images are not OCR-processed.</p>
         </div>
         {error&&<div className="flex items-center gap-1.5 text-red-400 text-xs"><AlertCircle size={12}/>{error}</div>}
       </div>
