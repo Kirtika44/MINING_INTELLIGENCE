@@ -7,7 +7,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { FileText, Download, Loader2, CheckCircle2, AlertCircle, BarChart3, ArrowRight } from 'lucide-react'
 import { ScrollReveal } from '@/components/common/ScrollReveal'
 import { useFetch } from '@/hooks/useFetch'
-import { reportsApi, sitesApi, type Report } from '@/services/api'
+import { reportsApi, sitesApi, documentsApi, type Report } from '@/services/api'
 import { useAuth } from '@/context/AuthContext'
 
 const REPORT_TYPES = [
@@ -67,6 +67,7 @@ export function ReportGeneratorPage() {
   const [type,  setType]  = useState(params.get('type')  || 'production')
   const [dept,  setDept]  = useState(params.get('dept')  || user?.department || '')
   const [siteId,setSiteId]= useState('')
+  const [documentId,setDocumentId]=useState(params.get('documentId')||'')
   const [period,setPeriod]= useState('2024-25')
   const [title, setTitle] = useState('')
   const [loading,setLoading] = useState(false)
@@ -75,6 +76,9 @@ export function ReportGeneratorPage() {
 
   const sitesQ = useFetch(() => sitesApi.list())
   const sites  = sitesQ.data?.sites || []
+  const documentsQ = useFetch(() => documentsApi.list({ limit: '100', status: 'READY' }))
+  const documents = documentsQ.data?.documents || []
+  const selectedDocument = documents.find(doc => doc.id === documentId)
 
   const content = report?.content
     ? (() => { try { return typeof report.content === 'string' ? JSON.parse(report.content) : report.content } catch { return null } })()
@@ -85,7 +89,7 @@ export function ReportGeneratorPage() {
     setLoading(true); setError(''); setReport(null)
     const t = title || `${REPORT_TYPES.find(x=>x.value===type)?.label} — ${period}`
     try {
-      const { report: r } = await reportsApi.generate({ title:t, type, department:dept, siteId:siteId||undefined, period })
+      const { report: r } = await reportsApi.generate({ title:t, type, department:dept, siteId:siteId||undefined, period, documentIds:documentId?[documentId]:undefined })
       setReport(r)
     } catch(e:unknown) { setError(e instanceof Error?e.message:'Report generation failed.') }
     finally { setLoading(false) }
@@ -148,6 +152,16 @@ export function ReportGeneratorPage() {
                   <option value="">All Sites</option>
                   {sites.map(s=><option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="block text-[#9ab5a0] text-xs mb-1.5">Uploaded source document</label>
+                <select value={documentId} onChange={e=>setDocumentId(e.target.value)}
+                  className="w-full bg-[#122318] border border-[#1c3828] rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none">
+                  <option value="">Use mine records only</option>
+                  {documentId&&!documents.some(doc=>doc.id===documentId)&&<option value={documentId}>Selected upload</option>}
+                  {documents.map(doc=><option key={doc.id} value={doc.id}>{doc.originalName}</option>)}
+                </select>
+                {selectedDocument&&<p className="text-[#6b7280] text-[10px] mt-1">Extracted fields from this file will be included with page references.</p>}
               </div>
               <div>
                 <label className="block text-[#9ab5a0] text-xs mb-1.5">Reporting Period</label>
