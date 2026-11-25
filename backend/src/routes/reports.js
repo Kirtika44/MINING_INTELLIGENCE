@@ -45,24 +45,52 @@ router.post('/generate', async (req, res, next) => {
       return res.status(400).json({ error: 'title, type and department are required.' })
     }
 
+    const requestedDocumentIds = Array.isArray(documentIds)
+      ? [...new Set(documentIds.filter(id => typeof id === 'string' && id.trim()))]
+      : []
+    const uploadedDocuments = requestedDocumentIds.length
+      ? await prisma.document.findMany({ where: { id: { in: requestedDocumentIds } } })
+      : []
+
+    if (uploadedDocuments.length !== requestedDocumentIds.length) {
+      return res.status(404).json({ error: 'One or more uploaded documents were not found.' })
+    }
+
+    const userDepartment = req.user.department || req.user.role.toLowerCase()
+    if (req.user.role !== 'ADMIN' && uploadedDocuments.some(doc => doc.department !== userDepartment)) {
+      return res.status(403).json({ error: 'You are not authorized to use one or more selected documents.' })
+    }
+
+    if (uploadedDocuments.some(doc => doc.status !== 'READY')) {
+      return res.status(409).json({ error: 'Wait until document processing is complete before generating its report.' })
+    }
+
+    const extractedFields = requestedDocumentIds.length
+      ? await prisma.knowledgeEntry.findMany({
+          where: { documentId: { in: requestedDocumentIds } },
+          orderBy: [{ documentId: 'asc' }, { fieldName: 'asc' }],
+        })
+      : []
+    const reportSiteId = siteId || (uploadedDocuments.length === 1 ? uploadedDocuments[0].siteId : null)
+
     // Fetch site + data for report content (Promise.all — SQLite compatible)
     const [site, productions, seams, geoData, reserves, envData, machines, riskItems] =
       await Promise.all([
-        siteId ? prisma.site.findUnique({ where: { id: siteId } }) : Promise.resolve(null),
-        siteId ? prisma.production.findMany({ where: { siteId }, orderBy: { date: 'asc' } }) : Promise.resolve([]),
-        siteId ? prisma.geologicalSeam.findMany({ where: { siteId } }) : Promise.resolve([]),
-        siteId ? prisma.geologicalData.findMany({ where: { siteId } }) : Promise.resolve([]),
-        siteId ? prisma.reserveData.findMany({ where: { siteId } }) : Promise.resolve([]),
-        siteId ? prisma.environmentalData.findMany({ where: { siteId }, orderBy: { monitoringDate: 'desc' }, take: 20 }) : Promise.resolve([]),
-        siteId ? prisma.machinery.findMany({ where: { siteId } }) : Promise.resolve([]),
-        siteId ? prisma.riskItem.findMany({ where: { siteId, status: 'OPEN' } }) : Promise.resolve([]),
+        reportSiteId ? prisma.site.findUnique({ where: { id: reportSiteId } }) : Promise.resolve(null),
+        reportSiteId ? prisma.production.findMany({ where: { siteId: reportSiteId }, orderBy: { date: 'asc' } }) : Promise.resolve([]),
+        reportSiteId ? prisma.geologicalSeam.findMany({ where: { siteId: reportSiteId } }) : Promise.resolve([]),
+        reportSiteId ? prisma.geologicalData.findMany({ where: { siteId: reportSiteId } }) : Promise.resolve([]),
+        reportSiteId ? prisma.reserveData.findMany({ where: { siteId: reportSiteId } }) : Promise.resolve([]),
+        reportSiteId ? prisma.environmentalData.findMany({ where: { siteId: reportSiteId }, orderBy: { monitoringDate: 'desc' }, take: 20 }) : Promise.resolve([]),
+        reportSiteId ? prisma.machinery.findMany({ where: { siteId: reportSiteId } }) : Promise.resolve([]),
+        reportSiteId ? prisma.riskItem.findMany({ where: { siteId: reportSiteId, status: 'OPEN' } }) : Promise.resolve([]),
       ])
 
     // Build report content based on type
     const content = buildReportContent({
       type, period, site,
       productions, seams, geoData, reserves,
-      envData, machines, riskItems,
+      envData, machines, riskItems, uploadedDocuments, extractedFields,
     })
 
     const report = await prisma.report.create({
@@ -70,7 +98,7 @@ router.post('/generate', async (req, res, next) => {
         title,
         type,
         department,
-        siteId:       siteId || null,
+        siteId:       reportSiteId || null,
         period:       period || null,
         summary:      content.summary,
         content:      JSON.stringify(content),   // SQLite: store as JSON string
@@ -80,9 +108,9 @@ router.post('/generate', async (req, res, next) => {
     })
 
     // Link documents if provided
-    if (documentIds && documentIds.length > 0) {
+    if (requestedDocumentIds.length > 0) {
       await prisma.reportDocument.createMany({
-        data: documentIds.map(docId => ({ reportId: report.id, documentId: docId })),
+        data: requestedDocumentIds.map(docId => ({ reportId: report.id, documentId: docId })),
         skipDuplicates: true,
       })
     }
@@ -120,7 +148,7 @@ router.delete('/:id', async (req, res, next) => {
 })
 
 // ── Report content builder ────────────────────────────────────────────
-function buildReportContent({ type, period, site, productions, seams, geoData, reserves, envData, machines, riskItems }) {
+function buildReportContent({ type, period, site, productions, seams, geoData, reserves, envData, machines, riskItems, uploadedDocuments = [], extractedFields = [] }) {
   const now     = new Date().toISOString()
   const siteName = site?.name || 'All Sites'
 
@@ -218,6 +246,52 @@ function buildReportContent({ type, period, site, productions, seams, geoData, r
         status: m.status, make: m.make, model: m.model,
       })) : 'Data not available',
     })
+  }
+
+  if (uploadedDocuments.length > 0) {
+    const documentsById = new Map(uploadedDocuments.map(doc => [doc.id, doc]))
+    const fieldsByDocument = new Map()
+    for (const field of extractedFields) {
+      if (!fieldsByDocument.has(field.documentId)) fieldsByDocument.set(field.documentId, [])
+      fieldsByDocument.get(field.documentId).push(field)
+    }
+
+    const findings = extractedFields.map(field => {
+      const doc = documentsById.get(field.documentId)
+      return {
+        document: doc?.originalName || 'Uploaded document',
+        field: field.fieldName,
+        value: field.fieldValue,
+        confidence: field.confidence,
+        page: field.sourcePage,
+      }
+    })
+    sections.unshift({
+      title: 'Uploaded Document Findings',
+      data: findings.length ? findings : 'Document processed, but no structured fields were extracted.',
+      note: 'Values below were extracted from the selected uploaded document(s). Review them against the source before making operational decisions.',
+    })
+
+    const documentSummary = uploadedDocuments.map(doc => {
+      const count = (fieldsByDocument.get(doc.id) || []).length
+      return `${doc.originalName} (${count} extracted fields)`
+    }).join('; ')
+    summary = summary
+      ? `${summary} Uploaded source: ${documentSummary}.`
+      : `Report generated from uploaded source: ${documentSummary}.`
+
+    for (const doc of uploadedDocuments) {
+      sources.push({ source: 'Uploaded document', doc: doc.originalName })
+    }
+    for (const field of extractedFields) {
+      const doc = documentsById.get(field.documentId)
+      sources.push({
+        value: `${field.fieldName}: ${field.fieldValue}`,
+        source: 'Extracted field',
+        doc: doc?.originalName,
+        page: field.sourcePage,
+      })
+    }
   }
 
   // Risk section for all report types
