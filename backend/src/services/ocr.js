@@ -101,7 +101,7 @@ async function extractText(filePath, mimeType) {
             } else if (value != null && key) {
               const normalized = key.replace(/[^a-z0-9]/gi, '').toLowerCase()
               const label = aliases[normalized] || key.replace(/([A-Z])/g, ' $1').trim()
-              const unit = /^(production|target|dispatch|totalreservemt|mineablereservemt)$/i.test(normalized) ? ' MT' : ''
+              const unit = /^(productionmt|production|targetmt|target|dispatchmt|dispatch|totalreservemt|mineablereservemt)$/i.test(normalized) ? ' MT' : ''
               flattened.push(`${label}: ${value}${unit}`)
             }
           }
@@ -132,7 +132,7 @@ function extractFields(text, department) {
   if (dateMatches) fields.dates = [...new Set(dateMatches)].slice(0, 5)
 
   // Mine / site name
-  const mineMatch = text.match(/(?:mine|colliery|opencast|project)[:\s]+([A-Z][A-Za-z\s\-]{2,30})/i)
+  const mineMatch = text.match(/(?:mine|colliery|opencast|project)[:\s]+([A-Z][A-Za-z \t\-]{2,30})/i)
   if (mineMatch) fields.mineName = mineMatch[1].trim()
 
   // ── Production fields ─────────────────────────────────────────────
