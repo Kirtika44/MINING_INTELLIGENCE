@@ -4,7 +4,9 @@
  * Uses fetch with JWT Bearer token from localStorage.
  */
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+const BASE = import.meta.env.PROD
+  ? '/api'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:4000/api')
 
 // ── Token helpers ──────────────────────────────────────────────────────
 export function getToken(): string | null {
